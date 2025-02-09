@@ -1,0 +1,133 @@
+﻿@model List<YouTubeApiProject.Models.YouTubeVideoModel>
+
+<h2 class="text-center mt-4">Search YouTube Videos</h2>
+
+@if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show text-center" role="alert">
+        @ViewBag.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Search Form -->
+<form asp-action="Search" method="post" class="mb-4 mx-auto w-75" id="searchForm">
+    <div class="input-group">
+        <input type="text" class="form-control" name="query" id="searchQuery" value="@ViewBag.Query" placeholder="Search for videos" required />
+        <button type="submit" class="btn btn-danger">Search</button>
+    </div>
+</form>
+
+@if (Model != null && Model.Any())
+{
+    <div class="container">
+        <!-- Filter Duration -->
+        <form asp-action="Search" method="post" id="filterForm" class="text-center mb-3">
+            <input type="hidden" name="query" value="@ViewBag.Query" />
+            <label class="fw-bold">Filter by Duration:</label>
+            <select name="duration" class="form-select d-inline w-auto ms-2" onchange="document.getElementById('filterForm').submit();">
+                <option value="" selected="@(string.IsNullOrEmpty(ViewBag.Duration) ? "selected" : null)">All</option>
+                <option value="short" selected="@(ViewBag.Duration == "short" ? "selected" : null)">Short (&lt; 4 min)</option>
+                <option value="medium" selected="@(ViewBag.Duration == "medium" ? "selected" : null)">Medium (4-20 min)</option>
+                <option value="long" selected="@(ViewBag.Duration == "long" ? "selected" : null)">Long (&gt; 20 min)</option>
+            </select>
+        </form>
+
+        <!-- Video Grid -->
+        <div class="row">
+            @foreach (var video in Model)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <img src="@video.ThumbnailUrl" class="card-img-top rounded-top-4" alt="@video.Title">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold">@video.Title</h5>
+                            <p class="card-text text-muted small">@video.Description</p>
+                            <p class="text-muted"><strong>Channel:</strong> @video.ChannelName</p>
+                            @if (!string.IsNullOrEmpty(video.PublishedDate))
+                            {
+                                <p class="text-muted"><strong>Published:</strong> @video.PublishedDate</p>
+                            }
+                            <a href="@video.VideoUrl" target="_blank" class="btn btn-danger w-100">🎥 Watch</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center align-items-center mt-4">
+            <button id="prevPageBtn" class="btn btn-outline-primary me-3"
+                    onclick="loadPage('@ViewBag.PrevPageToken', -1)"
+                    style="display: @(string.IsNullOrEmpty(ViewBag.PrevPageToken) ? "none" : "inline-block")">
+                &laquo; Previous
+            </button>
+
+            <span id="pageNumber" class="fw-bold text-muted">Page <span id="currentPage">1</span></span>
+
+            <button id="nextPageBtn" class="btn btn-outline-primary ms-3"
+                    onclick="loadPage('@ViewBag.NextPageToken', 1)"
+                    style="display: @(string.IsNullOrEmpty(ViewBag.NextPageToken) ? "none" : "inline-block")">
+                Next &raquo;
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <p class="text-muted text-center mt-3">No videos found. Try searching for something else.</p>
+}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let currentPage = 1;
+
+    function loadPage(pageToken, step) {
+        if (!pageToken) return;
+
+        $.ajax({
+            url: '@Url.Action("Search", "YouTube")',
+            type: 'POST',
+            data: {
+                query: $('#searchQuery').val(),
+                pageToken: pageToken,
+                duration: $('select[name="duration"]').val()
+            },
+            success: function (response) {
+                $("body").html(response);
+                currentPage += step;
+                $("#currentPage").text(currentPage);
+            },
+            error: function () {
+                alert("Error loading videos!");
+            }
+        });
+    }
+</script>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+        .card:hover {
+            transform: scale(1.03);
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+    }
+
+    .btn-outline-primary {
+        transition: 0.3s;
+    }
+
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+</style>
